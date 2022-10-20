@@ -1,0 +1,12 @@
+ ;0;0;0;
+x;0;6;1;
+/;0;0;1;
+T;14;0;0;A treasure chest!
+o;8;0;0;Border of life. Also known as a "door".
+B;8;15;0;A very comfy pillow, hopefully you'll enjoy.
+b;4;4;0;A bed.
+.;8;8;0;A rock.
+,;2;0;0;Grass.
+!;0;0;0;This is dangerous, go inside!
+player;2;2;0;
+tooltip;0;1;0;
