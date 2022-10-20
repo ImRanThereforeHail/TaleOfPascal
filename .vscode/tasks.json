@@ -1,0 +1,68 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Pascal",
+            "type": "shell",
+            "windows": {
+                "command": "C:\\FPC\\3.2.2\\bin\\i386-win32\\fpc.exe"
+            },
+            "linux": {
+                "command": "FPC_BIN_PATH"
+            },
+            "presentation": {
+                "reveal": "always"
+            },
+            "args": [
+                {
+                    "value": "${file}",
+                    "quoting": "escape"
+                }
+            ],
+            "problemMatcher": {
+                "owner": "external",
+                "pattern": {
+                    "regexp": "^([\\w]+\\.(p|pp|pas))\\((\\d+)\\,(\\d+)\\)\\s(Fatal|Error|Warning|Note):(.*)",
+                    "file": 1,
+                    "line": 3,
+                    "column": 4,
+                    "message": 6
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build and run",
+            "type": "shell",
+            "group": "test",
+            "command": "instantfpc",
+            "args": [
+                "${file}",
+                "-B"
+            ],
+            "presentation": {
+                "focus": true
+            },
+            "problemMatcher": {
+                "owner": "objectpascal",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
+                "pattern": {
+                    "kind": "location",
+                    "regexp": "^(.*)\\((\\d.*),(\\d.*)\\) (Warning|Error|Fatal): (.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5,
+                    "loop": true
+                }
+            }
+        }
+    ]
+}
