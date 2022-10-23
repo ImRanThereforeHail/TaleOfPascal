@@ -1,16 +1,76 @@
-set a = 0
-set b = 1
+set plate_1_count = 10
+set numbers = "0123456789"
+
+set long_txt = "The four plates must be pressed in the right order..."
+set cursor_x = 0
+
+set puzzle_count = 0
 
 touch 3 3
-    set_tile 1 1 ,.
+    set_tile 1 1 0 r
 
-touch 28 5
-    call add
-    if $a >= 20
-        set_tile 32 6 |o
-        set_tile 28 7 0p
-    touch 28 7
-        set_tile 32 6 |x
+touch 28 6
+    set plate_1_count -= 1
+
+    if $plate_1_count > 0
+        set char = $numbers at $plate_1_count
+        set_tile 28 5 $plate_1_count _
+    else
+        set_tile 28 5 " " _
+        set_tile 32 6 " " o
+        set_tile 28 6 o P
+
+        call print_msg
+
+func reset_plates
+    set puzzle_count = 0
+    set_tile 51 3 1 " "
+    set_tile 67 3 2 " "
+    set_tile 51 8 3 " "
+    set_tile 67 8 4 " "
+
+touch 67 9
+    if $puzzle_count == 0
+        set_tile 67 8 4 n
+        set puzzle_count += 1
+
+touch 67 4
+    if $puzzle_count == 1
+        set_tile 67 3 2 n
+        set puzzle_count += 1
+    elif $puzzle_count < 1
+        call reset_plates
+
+touch 51 4
+    if $puzzle_count == 2
+        set_tile 51 3 1 n
+        set puzzle_count += 1
+    elif $puzzle_count < 2
+        call reset_plates
+
+touch 51 9
+    if $puzzle_count == 3
+        set puzzle_count += 1
+        set_tile 51 8 3 n
+        set_tile 19 12 " " o
+        set_tile 20 12 " " o
+        set_tile 21 12 " " o
+        set_tile 22 12 " " o
+        set_tile 23 12 " " o
+        
+        set long_txt = "                                                      "
+        set cursor_x = 0
+        call print_msg
+    elif $puzzle_count < 3
+        call reset_plates
+
+func print_msg
+    set letter = $long_txt at $cursor_x
+    if $letter != ""
+        set_tile $cursor_x 24 $letter h
+        set cursor_x += 1
+        set length = len $long_txt
+        call print_msg
 
 func loop_add
     set a += 1

@@ -5,34 +5,45 @@ unit Mapping;
 interface
 uses Crt, Classes, SysUtils, Math, Fgl, Logging;
 
-const tooltip_width : integer = 30;
-    tooltip_height : integer = 6;
-    tooltip_gap : integer = 5;
-
-type TileType = record fg, bg, flags : integer; description : string end;
+type TileType = record fg, bg : byte; flags : integer; description : string end;
 type TileDB = specialize TFPGMap<string, TileType>;
+
+const tooltip_width : integer = 32;
+    tooltip_height : integer = 8;
+    tooltip_gap : integer = 5;
+    error_tile : TileType = (fg: 4; bg: 4; flags: 0; description: '');
 
 var map_width, map_height : integer;
     map_text, map_collision : TStringList;
     tile_db : TileDB;
 
-procedure CursorAt(x, y : integer);
+procedure CursorAt(x, y : Integer);
+function FetchTileType(tile_id : string) : TileType;
+
 procedure DrawTile(tile : char; tile_id : string);
 procedure DrawTile(tile_x, tile_y : integer; map_line : string);
 procedure DrawMap;
 
 implementation
 
-procedure CursorAt(x, y : integer);
+procedure CursorAt(x, y : Integer);
 begin
-    GoToXY(x + 1, y + 1);
+    GoToXY(tcrtcoord(x + 1), tcrtcoord(y + 1));
+end;
+
+function FetchTileType(tile_id : string) : TileType;
+begin
+    if not tile_db.TryGetData(tile_id, result) then result := error_tile;
 end;
 
 // Draw tile based on a character and the tile id
 procedure DrawTile(tile : char; tile_id : string);
+var tile_type : TileType;
 begin
-    TextBackground(tile_db[tile_id].bg);
-    TextColor(tile_db[tile_id].fg);
+    tile_type := FetchTileType(tile_id);
+
+    TextBackground(tile_type.bg);
+    TextColor(tile_type.fg);
     Write(tile)
 end;
 
@@ -100,8 +111,8 @@ begin
     begin
         parts.DelimitedText := tile_db_text[i];
 
-        tile_type.fg := StrToInt(parts[1]);
-        tile_type.bg := StrToInt(parts[2]);
+        tile_type.fg := byte(StrToInt(parts[1]));
+        tile_type.bg := byte(StrToInt(parts[2]));
         tile_type.flags := StrToInt(parts[3]);
         tile_type.description := parts[4];
 

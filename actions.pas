@@ -3,7 +3,7 @@
 unit Actions;
 
 interface
-uses Crt, Math, Classes, SysUtils, Fgl, Variants, Logging, Mapping;
+uses Crt, Math, Classes, SysUtils, character, Fgl, Variants, Logging, Mapping;
 
 type VarMap = specialize TFPGMap<string, Variant>;
 
@@ -35,7 +35,7 @@ end; }
 
 type ActionLoadException = Class(Exception);
 
-type Action = class
+type Action = class(TInterfacedObject)
 public
     procedure LoadFrom(parts : TStringList; _parent : Action; _indent : integer); virtual;
     procedure Run; virtual;
@@ -81,14 +81,22 @@ public
     a, b : ActionValue;
     op : string;
 
+    has_else_action : boolean;
+    else_action : Action;
+
     procedure LoadFrom(parts : TStringList; _parent : Action; _indent : integer); override;
     procedure Run; override;
+    procedure ExecuteTest;
 end;
+
+type GhostAction = interface ['{6a1ffa4f-cb09-4e26-a59a-2b22efc23d90}'] end;
+
+type ElifConditionalAction = class(ConditionalAction, GhostAction) end;
+type ElseConditionalAction = class(ParentAction, GhostAction) end;
 
 type SetAction = class(Action)
 public
-    a, b, c : ActionValue;
-    op, op2 : string;
+    a, b, c, op, op2 : ActionValue;
 
     procedure LoadFrom(parts : TStringList; _parent : Action; _indent : integer); override;
     procedure Run; override;
@@ -104,7 +112,7 @@ end;
 
 type SetTileAction = class(Action)
 public
-    x, y, tile : ActionValue;
+    x, y, tile_text, tile_type : ActionValue;
 
     procedure LoadFrom(parts : TStringList; _parent : Action; _indent : integer); override;
     procedure Run; override;
@@ -121,6 +129,7 @@ type FunctionActionMap = specialize TFPGMap<string, FunctionAction>;
 var function_actions : FunctionActionMap;
 
 var var_map : VarMap;
+procedure DebugVarMap;
 
 procedure SetupActions;
 
@@ -146,7 +155,7 @@ end;
 
 function VarValue.GetValue() : Variant;
 begin
-    exit(var_map[id])
+    if not var_map.TryGetData(id, Result) then exit('');
 end;
 
 function ActionValueFrom(str : string) : ActionValue;
@@ -156,7 +165,7 @@ begin
     if str[1] = '$' then result := VarValue.Create(Copy(str, 2))
     else
     begin
-        if (pos('.', str) > 0) and TryStrToFloat(str, f) then result := ConstantValue.Create(f)
+        if (pos('.', str) > 0) and (Length(str) > 1) and TryStrToFloat(str, f) then result := ConstantValue.Create(f)
         else if TryStrToInt(str, i) then result := ConstantValue.Create(i)
         else result := ConstantValue.Create(str);
     end;
@@ -165,8 +174,7 @@ end;
 function ComputeOperation(a, b : Variant; op : string) : Variant;
 begin
     result := b;
-
-    case op of
+    case VarToStr(op) of
         '+': result := a + b;
         '-': result := a - b;
         '*': result := a * b;
@@ -185,7 +193,10 @@ begin
             if a < b then result := a
             else result := b;
         end;
-        'at': result := a[b];
+        'at': begin
+            if VarIsType(a, varString) and (Length(VarToStr(a)) > b) then result := VarToStr(a)[b + 1]
+            else result := '';
+        end;
     end;
 end;
 
@@ -276,46 +287,58 @@ begin
 end;
 
 procedure ConditionalAction.Run;
+begin
+    ExecuteTest;
+end;
+
+procedure ConditionalAction.ExecuteTest;
 var act : Action;
     passed : boolean;
 begin
-    passed := true;
     passed := ComputeOperation(a.GetValue(), b.GetValue(), op) = true;
 
     WriteLn(log_file, 'Condition ', a.GetValue(), ' ', op, ' ', b.GetValue(), ' resulted in ', passed); Flush(log_file);
     // Evaluate condition
-    if passed then for act in actions do act.Run;
+    if passed then
+        for act in actions do
+            act.Run
+    else if has_else_action then else_action.Run;
 end;
 
 procedure SetAction.LoadFrom(parts : TStringList; _parent : Action; _indent : integer);
+var empty_var : Variant;
 begin
     inherited;
     a := ActionValueFrom(parts[1]);
-    op := parts[2];
+    op := ActionValueFrom(parts[2]);
     b := ActionValueFrom(parts[3]);
-    if parts.Count >= 6 then begin
-        op2 := parts[4];
-        c := ActionValueFrom(parts[5]);
-    end;
+    
+    VarClear(empty_var);
+    op2 := ConstantValue.Create(empty_var);
+    c := ConstantValue.Create(empty_var);
+    
+    if parts.Count >= 5 then op2 := ActionValueFrom(parts[4]);
+    if parts.Count >= 6 then c := ActionValueFrom(parts[5]);
 end;
 
 procedure SetAction.Run;
-var i : integer;
-    a_val : Variant;
-    a_res : Variant;
-    b_res : Variant;
+var a_val, b_val, c_val, op_val, op2_val : Variant;
+    a_res, b_res : Variant;
 begin
     a_val := a.GetValue();
+    b_val := b.GetValue();
+    c_val := c.GetValue();
+    op_val := op.GetValue();
+    op2_val := op2.GetValue();
     
-    if op2 <> '' then b_res := ComputeOperation(b.GetValue(), c.GetValue(), op2)
-    else b_res := b.GetValue();
+    if VarIsType(b_val, varString) and (b_val = 'tile') then b_res := map_text[c_val][op2_val - 1]
+    else if VarIsType(b_val, varString) and (b_val = 'tile_type') then b_res := map_collision[c_val][op2_val - 1]
+    else if VarIsType(b_val, varString) and (b_val = 'len') then b_res := Length(VarToStr(op2_val))
+    else if not VarIsEmpty(op2_val) then b_res := ComputeOperation(b_val, c_val, op2_val)
+    else b_res := b_val;
 
     if not var_map.TryGetData(a_val, a_res) then a_res := Null;
-    var_map[a.GetValue()] := ComputeOperation(a_res, b_res, Copy(op, 1, Length(op) - 1));
-    { for i := 0 to var_map.Count - 1 do
-    begin
-        WriteLn(log_file, 'var: ', var_map.Keys[i], ' = ', var_map.Data[i]); Flush(log_file); // Debug Log
-    end; }
+    var_map[a.GetValue()] := ComputeOperation(a_res, b_res, Copy(op_val, 1, Length(op_val) - 1));
 end;
 
 procedure CallAction.LoadFrom(parts : TStringList; _parent : Action; _indent : integer);
@@ -333,13 +356,13 @@ end;
 procedure SetTileAction.LoadFrom(parts : TStringList; _parent : Action; _indent : integer);
 begin
     inherited;
-    
     Self.x := ActionValueFrom(parts[1]);
     Self.y := ActionValueFrom(parts[2]);
     
-    Self.tile := ActionValueFrom(parts[3]);
-    // Self.tile_text := parts[3][1];
-    // Self.tile_type := parts[3][2];
+    Self.tile_text := ActionValueFrom(parts[3]);
+    Self.tile_type := ActionValueFrom(parts[4]);
+
+    // WriteLn(log_file, 'set tile: ', Self.x.GetValue(), ' ', Self.y.GetValue(), ' ', Self.tile_text.GetValue(), ' ', Self.tile_type.GetValue()); Flush(log_file);
 end;
 
 procedure SetTileAction.Run;
@@ -348,14 +371,19 @@ var tile_val : string;
 var x_val, y_val : integer;
 begin
     inherited;
-    tile_val := tile.GetValue();
+    tile_val := tile_type.GetValue();
     x_val := x.GetValue();
     y_val := y.GetValue();
-    // WriteLn('Setting tile!');
+
+    if (x_val > map_width) or (y_val > map_height) then exit();
+
+    // Set tile type
     str_temp := map_collision[y_val];
-    str_temp[x_val + 1] := tile_val[2];
+    str_temp[x_val + 1] := tile_val[1];
     map_collision[y_val] := str_temp;
 
+    // Set tile text
+    tile_val := tile_text.GetValue();
     str_temp := map_text[y_val];
     str_temp[x_val + 1] := tile_val[1];
     map_text[y_val] := str_temp;
@@ -364,13 +392,26 @@ begin
     DrawTile(x_val, y_val, str_temp);
 end;
 
+procedure DebugVarMap;
+var i : Integer;
+begin
+    WriteLn(log_file, '[----------VAR MAP DEBUG----------]');
+    for i := 0 to var_map.Count - 1 do WriteLn(log_file, var_map.Keys[i], ': ', var_map.Data[i]);
+    WriteLn(log_file, '[---------------------------------]');
+
+    // Flush at the end only
+    Flush(log_file);
+end;
+
 procedure SetupActions;
 var actions_text, action_parts : TStringList;
     action_line : string;
     indent : integer;
     line_action : Action;
+    cond_action : ConditionalAction;
     parent_action : ParentAction;
     i, j : integer;
+    is_ghost : Boolean;
 begin
     actions_text := TStringList.Create;
     actions_text.LoadFromFile('actions.txt');
@@ -392,7 +433,7 @@ begin
 
         // Count and remove indent from this line
         indent := 0;
-        while action_line[1] = ' ' do
+        while (Length(action_line) > 0) and IsWhiteSpace(action_line[1]) do
         begin
             inc(indent);
             Delete(action_line, 1, 1);
@@ -411,19 +452,35 @@ begin
         for j := 1 to action_parts.Count - 1 do Write(log_file, ' ', action_parts[j]);
         WriteLn(log_file); Flush(log_file);
 
+        is_ghost := false;
+
         case action_parts[0] of
             'func': line_action := FunctionAction.Create;
             'touch': line_action := TouchAction.Create;
-            'if': line_action := ConditionalAction.Create;
             'set': line_action := SetAction.Create;
             'call': line_action := CallAction.Create;
             'set_tile': line_action := SetTileAction.Create;
+            'if': line_action := ConditionalAction.Create;
+            'elif': begin
+                line_action := ElifConditionalAction.Create;
+                cond_action.else_action := line_action;
+                cond_action.has_else_action := true;
+                is_ghost := true;
+            end;
+            'else': begin
+                line_action := ElseConditionalAction.Create;
+                cond_action.else_action := line_action;
+                cond_action.has_else_action := true;
+                is_ghost := true;
+            end;
             else line_action := Action.Create;
         end;
 
         line_action.LoadFrom(action_parts, parent_action, indent);
-        parent_action.actions.Add(line_action);
+        
+        if not is_ghost then parent_action.actions.Add(line_action);
 
+        if line_action is ConditionalAction then cond_action := line_action as ConditionalAction;
         if line_action is ParentAction then parent_action := line_action as ParentAction;
     end;
 
@@ -433,6 +490,6 @@ begin
 end;
 
 initialization
-DecimalSeparator := '.';
+DefaultFormatSettings.DecimalSeparator := '.';
 SetupActions;
 end.

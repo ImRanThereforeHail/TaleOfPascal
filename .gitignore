@@ -2,3 +2,5 @@
 *.o
 *.ppu
 log.txt
+
+/tests

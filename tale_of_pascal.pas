@@ -1,7 +1,7 @@
 {$mode objfpc} // directive to be used for defining classes
 
 program tale_of_pascal;
-uses Crt, Math, Classes, SysUtils, Fgl, Logging, Mapping, Actions;
+uses Crt, Math, Classes, SysUtils, Fgl, Windows, Logging, Mapping, Actions;
 
 type Direction = (up, down, left, right);
 
@@ -23,7 +23,7 @@ var player_tile : string;
     i, j : integer;
 begin
     player_tile := map_collision[y][x + 1];
-    desc := tile_db[player_tile].description;
+    desc := FetchTileType(player_tile).description;
     desc_words := TStringList.Create;
     { desc_words.Delimiter := ' ';
     desc_words.StrictDelimiter := true;
@@ -112,6 +112,8 @@ begin
     // Wait until there is one input that is an arrow key (* any other inputs are disregarded *)
     repeat
         input:=ReadKey;
+        
+        if input = #100 then DebugVarMap;
         if input = #27 then exit(input) // If pressed ESC, exit immediately
     until (input = #0);
 
@@ -150,7 +152,7 @@ begin
     end; }
 
     // Out-of-bounds / Collision Detection
-    if (x < 0) or (x > map_width) or (y < 0) or (y > map_height) or (tile_db[map_collision[y][x + 1]].flags and 1 = 1) then
+    if (x < 0) or (x > map_width) or (y < 0) or (y > map_height) or (FetchTileType(map_collision[y][x + 1]).flags and 1 = 1) then
     begin
         x := lx;
         y := ly;
@@ -162,10 +164,27 @@ begin
     exit(input)
 end;
 
-var input : char;
+procedure InitializeConsole;
+var Coord: TCoord;
+    Rect: TSmallRect;
 begin
     CursorOff;
     ClrScr;
+  
+    Rect.Left := 1;
+    Rect.Top := 1;
+    Rect.Right := 100;  // notice horiz scroll bar once the following executes
+    Rect.Bottom := 30;
+    Coord.X := Byte(Rect.Right + 1 - Rect.Left);
+    Coord.y := Byte(Rect.Bottom + 1 - Rect.Top);
+    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), Coord);
+    SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), False, Rect);
+end;
+
+var input : char;
+
+begin
+    InitializeConsole;
     DrawMap;
 
     repeat

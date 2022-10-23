@@ -1,37 +1,105 @@
 {
     "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+            // task settings for files and folders, use full path for commands
+            "FPC_COMMAND": "fpc",
+            "PROJECTFILE": "${relativeFile}",
+            "PROJECTBASE": "${fileBasenameNoExtension}",
+            "OUTPUT": ".build",
+            "DEBUG": ".build/debug",
+            "RELEASE": ".build/release",
+            "DEPLOY": ".build/deploy",
+            "EXTENSION": "",
+            "PROCESSOR": "-Px86_64",
+            "SYNTAX": "-Mobjfpc"
+        }
+    },
     "tasks": [
-        {
-            "label": "Pascal",
+        { //! Build debug without any optimization
+            "label": "fpc: Build Debug",
             "type": "shell",
-            "windows": {
-                "command": "C:\\FPC\\3.2.2\\bin\\i386-win32\\fpc.exe"
-            },
-            "linux": {
-                "command": "FPC_BIN_PATH"
-            },
-            "presentation": {
-                "reveal": "always"
-            },
-            "args": [
-                {
-                    "value": "${file}",
-                    "quoting": "escape"
-                }
-            ],
-            "problemMatcher": {
-                "owner": "external",
-                "pattern": {
-                    "regexp": "^([\\w]+\\.(p|pp|pas))\\((\\d+)\\,(\\d+)\\)\\s(Fatal|Error|Warning|Note):(.*)",
-                    "file": 1,
-                    "line": 3,
-                    "column": 4,
-                    "message": 6
-                }
-            },
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "command": "fpc",
+            "args": [
+                "tale_of_pascal.pas", // main project file
+                "-Pi386", // target processor
+                "-Mobjfpc", // pascal syntax mode
+                "-CroOti", // generated code setting
+                "-vm6058", // Hide note about inlining
+                "-O-", // disable optimization
+                "-g", // debug info
+                "-B", // rebuild all units
+                "-v", // verbose message
+                "-gw", // dwarf debug setting
+                "-godwarfsets", // dwarf mode setting
+                "-FEout",
+            ],
+            "presentation": {
+                "focus": true
+            },
+            "problemMatcher": {
+                "owner": "objectpascal",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
+                "pattern": {
+                    // capture FPC's error messages and display them in Problems panel
+                    "kind": "location",
+                    "regexp": "^(.*)\\((\\d.*),(\\d.*)\\) (Warning|Error|Fatal): (.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5,
+                    "loop": true
+                }
+            }
+        },
+        { //! Build debug without any optimization
+            "label": "fpc: Build Debug (This)",
+            "type": "shell",
+            "group": "build",
+            "command": "fpc",
+            "args": [
+                "${relativeFile}", // main project file
+                "-Pi386", // target processor
+                "-Mobjfpc", // pascal syntax mode
+                "-CroOti", // generated code setting
+                "-vm6058", // Hide note about inlining
+                "-O-", // disable optimization
+                "-g", // debug info
+                "-B", // rebuild all units
+                "-v", // verbose message
+                "-gw", // dwarf debug setting
+                "-godwarfsets", // dwarf mode setting
+                "-FEout",
+            ],
+            "presentation": {
+                "focus": true
+            },
+            "problemMatcher": {
+                "owner": "objectpascal",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
+                "pattern": {
+                    // capture FPC's error messages and display them in Problems panel
+                    "kind": "location",
+                    "regexp": "^(.*)\\((\\d.*),(\\d.*)\\) (Warning|Error|Fatal): (.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5,
+                    "loop": true
+                }
             }
         },
         {
@@ -41,7 +109,8 @@
             "command": "instantfpc",
             "args": [
                 "${file}",
-                "-B"
+                "-B",
+                "-g"
             ],
             "presentation": {
                 "focus": true

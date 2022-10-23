@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "gdb",
+            "name": "Debug",
+            "request": "launch",
+            "target": "out/tale_of_pascal.exe",
+            "cwd": "${workspaceRoot}",
+            "valuesFormatting": "prettyPrinters",
+            "preLaunchTask": "${defaultBuildTask}",
+            "terminal": "",
+        }
+    ]
+}

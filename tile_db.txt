@@ -1,14 +1,26 @@
- ;0;0;0;
+ ;0;2;0;
+_;0;6;0;
 x;0;6;1;
-/;0;0;1;
-T;14;0;0;A treasure chest!
-o;8;0;0;Border of life. Also known as a "door".
+/;0;2;1;
+|;0;6;1;
+:;0;6;0;
+-;0;0;0;
+h;7;0;0;
+n;9;2;0;The plate below has been pressed in the right order.
+T;14;6;0;Congratulations, you get a treasure chest! The chest alone cost all our budget, though, so it's empty '^^)
+o;0;14;0;Hey, the way here is now open!
 B;8;15;0;A very comfy pillow, hopefully you'll enjoy.
 b;4;4;0;A bed.
-.;8;8;0;A rock.
-,;2;0;0;Grass.
-!;0;0;0;This is dangerous, go inside!
-p;15;7;0;A pressure plate you've just stepped on.
-+;8;0;0;A secret plate, spawns secret (and useless) objects.
-player;2;2;0;
-tooltip;0;1;0;
+.;0;2;0;A rock.
+r;0;2;0;A rock. You spawned this one, though.
+,;10;2;0;Grass.
+!;0;2;0;This is dangerous, go inside!
+p;0;7;0;A pressure plate you've just stepped on.
+P;8;7;0;The plate is stuck. You've overstepped on it, my dude.
++;8;2;0;A secret plate, spawns secret (and useless) objects.
+1;15;7;0;The note reads: The first shape to exist was the square, the most emcompassing and righteous.
+2;15;7;0;The note reads: The second shape to exist was the line, to make the connections.
+3;15;7;0;The note reads: The third shape to exist was the dot, to stop the lines from stretching forever.
+4;15;7;0;The note reads: The last shape to exist was the triangle, to make the world stable and firm.
+player;0;3;0;
+tooltip;15;1;0;
