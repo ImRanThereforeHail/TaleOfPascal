@@ -104,8 +104,7 @@ end;
 
 type SetTileAction = class(Action)
 public
-    x, y : integer;
-    tile_text, tile_type : char;
+    x, y, tile : ActionValue;
 
     procedure LoadFrom(parts : TStringList; _parent : Action; _indent : integer); override;
     procedure Run; override;
@@ -335,28 +334,34 @@ procedure SetTileAction.LoadFrom(parts : TStringList; _parent : Action; _indent 
 begin
     inherited;
     
-    Self.x := StrToInt(parts[1]);
-    Self.y := StrToInt(parts[2]);
+    Self.x := ActionValueFrom(parts[1]);
+    Self.y := ActionValueFrom(parts[2]);
     
-    Self.tile_text := parts[3][1];
-    Self.tile_type := parts[3][2];
+    Self.tile := ActionValueFrom(parts[3]);
+    // Self.tile_text := parts[3][1];
+    // Self.tile_type := parts[3][2];
 end;
 
 procedure SetTileAction.Run;
 var str_temp : string;
+var tile_val : string;
+var x_val, y_val : integer;
 begin
     inherited;
+    tile_val := tile.GetValue();
+    x_val := x.GetValue();
+    y_val := y.GetValue();
     // WriteLn('Setting tile!');
-    str_temp := map_collision[y];
-    str_temp[x + 1] := tile_type;
-    map_collision[y] := str_temp;
+    str_temp := map_collision[y_val];
+    str_temp[x_val + 1] := tile_val[2];
+    map_collision[y_val] := str_temp;
 
-    str_temp := map_text[y];
-    str_temp[x + 1] := tile_text;
-    map_text[y] := str_temp;
+    str_temp := map_text[y_val];
+    str_temp[x_val + 1] := tile_val[1];
+    map_text[y_val] := str_temp;
 
-    CursorAt(x, y);
-    DrawTile(x, y, str_temp);
+    CursorAt(x_val, y_val);
+    DrawTile(x_val, y_val, str_temp);
 end;
 
 procedure SetupActions;
