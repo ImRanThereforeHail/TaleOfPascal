@@ -8,5 +8,7 @@ b;4;4;0;A bed.
 .;8;8;0;A rock.
 ,;2;0;0;Grass.
 !;0;0;0;This is dangerous, go inside!
+p;15;7;0;A pressure plate you've just stepped on.
++;8;0;0;A secret plate, spawns secret (and useless) objects.
 player;2;2;0;
 tooltip;0;1;0;

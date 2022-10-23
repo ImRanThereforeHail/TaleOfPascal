@@ -1,0 +1,10 @@
+touch 5 10
+    sound beep
+    prompt Pull
+        set switch_on 1
+
+touch 10 1
+    if switch_on == 1
+        set_tile oty
+    else
+        dialogue door_locked

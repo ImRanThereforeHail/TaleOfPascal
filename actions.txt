@@ -1,0 +1,21 @@
+set a = 0
+set b = 1
+
+touch 3 3
+    set_tile 1 1 ,.
+
+touch 28 5
+    call add
+    if $a >= 20
+        set_tile 32 6 |o
+        set_tile 28 7 0p
+    touch 28 7
+        set_tile 32 6 |x
+
+func loop_add
+    set a += 1
+    if $a < 10
+        call loop_add
+
+func add
+    set a += 1 + $b
