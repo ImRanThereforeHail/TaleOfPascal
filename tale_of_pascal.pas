@@ -143,8 +143,19 @@ begin
         end;
     end;
     
+    // Interop w/ Action Lang
+    SetVarMap('player_lx', lx);
+    SetVarMap('player_ly', ly);
+    
+    SetVarMap('player_x', x);
+    SetVarMap('player_y', y);
+
     TouchAction.DetectTouches(x, y);
     
+    // Interop back w/ Action Lang
+    x := GetVarMap('player_x');
+    y := GetVarMap('player_y');
+
     // Pointer-based Touch action code
     { touch_action := touch_actions[x][y];
     if touch_action <> nil then begin

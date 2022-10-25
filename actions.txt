@@ -1,26 +1,36 @@
+// Counts how many times the plate in the first room has been pressed
 set plate_1_count = 10
-set numbers = "0123456789"
 
-set long_txt = "The four plates must be pressed in the right order..."
+// Quotes are only necessary when the string contains spaces
+set message = "The four plates must be pressed in the right order..."
 set cursor_x = 0
+set cursor_y = 24
 
+set message at 3 = p
+// Example for map tile reading
+set tile_at_some_pos = tile 0 12
+// Example for double pointers
+set plate_1_ptr = "plate_1_count"
+
+// Counts how many correct plates have been successfully stepped on in the numbers puzzle
 set puzzle_count = 0
 
+// Secret rock >.>
 touch 3 3
     set_tile 1 1 0 r
 
+// First room plate
 touch 28 6
     set plate_1_count -= 1
 
-    if $plate_1_count > 0
-        set char = $numbers at $plate_1_count
+    if $$plate_1_ptr > 0
         set_tile 28 5 $plate_1_count _
     else
         set_tile 28 5 " " _
         set_tile 32 6 " " o
         set_tile 28 6 o P
 
-        call print_msg
+        call print_message
 
 func reset_plates
     set puzzle_count = 0
@@ -29,11 +39,13 @@ func reset_plates
     set_tile 51 8 3 " "
     set_tile 67 8 4 " "
 
+// Plate 4
 touch 67 9
     if $puzzle_count == 0
         set_tile 67 8 4 n
         set puzzle_count += 1
 
+// Plate 2
 touch 67 4
     if $puzzle_count == 1
         set_tile 67 3 2 n
@@ -41,6 +53,7 @@ touch 67 4
     elif $puzzle_count < 1
         call reset_plates
 
+// Plate 1
 touch 51 4
     if $puzzle_count == 2
         set_tile 51 3 1 n
@@ -48,6 +61,7 @@ touch 51 4
     elif $puzzle_count < 2
         call reset_plates
 
+// Plate 3
 touch 51 9
     if $puzzle_count == 3
         set puzzle_count += 1
@@ -58,24 +72,24 @@ touch 51 9
         set_tile 22 12 " " o
         set_tile 23 12 " " o
         
-        set long_txt = "                                                      "
+        // Clear the hint message
+        set message = "                                                      "
         set cursor_x = 0
-        call print_msg
+        call print_message
     elif $puzzle_count < 3
         call reset_plates
 
-func print_msg
-    set letter = $long_txt at $cursor_x
+// Print text contained in "message" to (cursor_x, cursor_y)
+func print_message
+    set letter = $message at $cursor_x
     if $letter != ""
-        set_tile $cursor_x 24 $letter h
+        set_tile $cursor_x $cursor_y $letter h
         set cursor_x += 1
-        set length = len $long_txt
-        call print_msg
+        set length = len $message
+        call print_message
 
+// Simple addition loop example
 func loop_add
     set a += 1
     if $a < 10
         call loop_add
-
-func add
-    set a += 1 + $b

@@ -21,9 +21,9 @@ end;
 
 type VarValue = class(TInterfacedObject, ActionValue)
 public
-    var id : string;
+    var id : ActionValue;
 
-    constructor Create(_id : string);
+    constructor Create(_id : ActionValue);
     function GetValue() : Variant;
 end;
 
@@ -130,6 +130,8 @@ var function_actions : FunctionActionMap;
 
 var var_map : VarMap;
 procedure DebugVarMap;
+procedure SetVarMap(id : string; value : Variant);
+function GetVarMap(id : string) : Variant;
 
 procedure SetupActions;
 
@@ -143,7 +145,7 @@ begin
     value := _value;
 end;
 
-constructor VarValue.Create(_id : string);
+constructor VarValue.Create(_id : ActionValue);
 begin
     id := _id;
 end;
@@ -155,14 +157,14 @@ end;
 
 function VarValue.GetValue() : Variant;
 begin
-    if not var_map.TryGetData(id, Result) then exit('');
+    if not var_map.TryGetData(id.GetValue(), Result) then exit('');
 end;
 
 function ActionValueFrom(str : string) : ActionValue;
 var i : integer;
     f : single;
 begin
-    if str[1] = '$' then result := VarValue.Create(Copy(str, 2))
+    if str[1] = '$' then result := VarValue.Create(ActionValueFrom(Copy(str, 2)))
     else
     begin
         if (pos('.', str) > 0) and (Length(str) > 1) and TryStrToFloat(str, f) then result := ConstantValue.Create(f)
@@ -172,6 +174,7 @@ begin
 end;
 
 function ComputeOperation(a, b : Variant; op : string) : Variant;
+var cast_type : Integer;
 begin
     result := b;
     case VarToStr(op) of
@@ -192,6 +195,25 @@ begin
         'min': begin
             if a < b then result := a
             else result := b;
+        end;
+        'as': begin
+            cast_type := varUnknown;
+            case VarToStr(b) of
+                'string': cast_type := varString;
+                'int': cast_type := varInteger;
+                'char': begin
+                    cast_type := varString;
+                    a := char(byte(a));
+                end;
+                'bool': cast_type := varBoolean;
+                'byte': cast_type := varByte;
+                'short': cast_type := varShortInt;
+                'long': cast_type := varInt64;
+                'float': cast_type := varSingle;
+                'double': cast_type := varDouble;
+            end;
+
+            VarCast(result, a, cast_type);
         end;
         'at': begin
             if VarIsType(a, varString) and (Length(VarToStr(a)) > b) then result := VarToStr(a)[b + 1]
@@ -324,6 +346,7 @@ end;
 procedure SetAction.Run;
 var a_val, b_val, c_val, op_val, op2_val : Variant;
     a_res, b_res : Variant;
+    at_temp : string;
 begin
     a_val := a.GetValue();
     b_val := b.GetValue();
@@ -331,14 +354,26 @@ begin
     op_val := op.GetValue();
     op2_val := op2.GetValue();
     
-    if VarIsType(b_val, varString) and (b_val = 'tile') then b_res := map_text[c_val][op2_val - 1]
-    else if VarIsType(b_val, varString) and (b_val = 'tile_type') then b_res := map_collision[c_val][op2_val - 1]
+    if op_val = 'at' then
+    begin
+        if op2_val = '=' then
+        begin
+            at_temp := VarToStr(var_map[a_val]);
+            at_temp[b_val] := c_val;
+            var_map[a_val] := at_temp;
+        end;
+        exit
+    end;
+    
+    if VarIsType(b_val, varString) and (b_val = 'tile') then b_res := map_text[c_val][op2_val + 1]
+    else if VarIsType(b_val, varString) and (b_val = 'tile_type') then b_res := map_collision[c_val][op2_val + 1]
     else if VarIsType(b_val, varString) and (b_val = 'len') then b_res := Length(VarToStr(op2_val))
     else if not VarIsEmpty(op2_val) then b_res := ComputeOperation(b_val, c_val, op2_val)
     else b_res := b_val;
 
     if not var_map.TryGetData(a_val, a_res) then a_res := Null;
-    var_map[a.GetValue()] := ComputeOperation(a_res, b_res, Copy(op_val, 1, Length(op_val) - 1));
+
+    var_map[a_val] := ComputeOperation(a_res, b_res, Copy(op_val, 1, Length(op_val) - 1));
 end;
 
 procedure CallAction.LoadFrom(parts : TStringList; _parent : Action; _indent : integer);
@@ -403,6 +438,16 @@ begin
     Flush(log_file);
 end;
 
+procedure SetVarMap(id : string; value : Variant);
+begin
+    var_map[id] := value;
+end;
+
+function GetVarMap(id : string) : Variant;
+begin
+    result := var_map[id];
+end;
+
 procedure SetupActions;
 var actions_text, action_parts : TStringList;
     action_line : string;
@@ -438,9 +483,12 @@ begin
             inc(indent);
             Delete(action_line, 1, 1);
         end;
-
+        
+        // Commenting (it's just like this line!)
+        if pos('//', action_line) > 0 then action_line := Copy(action_line, 1, pos('//', action_line) - 1);
+        
         // Skip empty lines
-        if Length(action_line) = 0 then continue;
+        if (Length(action_line) = 0) or (LeftStr(action_line, 2) = '//') then continue;
 
         // Pop parents when the parents are more indented than the current line
         while parent_action.indent >= indent do parent_action := parent_action.parent;

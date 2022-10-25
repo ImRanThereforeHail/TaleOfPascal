@@ -22,4 +22,4 @@
 
 
 
-The door opens if a plate is pressed enough.        
+The door opens if a plate is pressed enough.          
