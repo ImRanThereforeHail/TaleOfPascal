@@ -11,6 +11,8 @@ type ActionValue = interface
     function GetValue() : Variant;
 end;
 
+type ActionValueList = specialize TFPGList<ActionValue>;
+
 type ConstantValue = class(TInterfacedObject, ActionValue)
 public
     var value : Variant;
@@ -118,6 +120,14 @@ public
     procedure Run; override;
 end;
 
+type PrintAction = class(Action)
+public
+    fields : ActionValueList;
+
+    procedure LoadFrom(parts : TStringList; _parent : Action; _indent : integer); override;
+    procedure Run; override;
+end;
+
 function ComputeOperation(a, b : Variant; op : string) : Variant;
 
 function ActionValueFrom(str : string) : ActionValue;
@@ -167,7 +177,9 @@ begin
     if str[1] = '$' then result := VarValue.Create(ActionValueFrom(Copy(str, 2)))
     else
     begin
-        if (pos('.', str) > 0) and (Length(str) > 1) and TryStrToFloat(str, f) then result := ConstantValue.Create(f)
+        if str = 'true' then result := ConstantValue.Create(True)
+        else if str = 'false' then result := ConstantValue.Create(False)
+        else if (pos('.', str) > 0) and (Length(str) > 1) and TryStrToFloat(str, f) then result := ConstantValue.Create(f)
         else if TryStrToInt(str, i) then result := ConstantValue.Create(i)
         else result := ConstantValue.Create(str);
     end;
@@ -182,12 +194,16 @@ begin
         '-': result := a - b;
         '*': result := a * b;
         '/': result := a / b;
+        '%': result := a mod b;
         '==': result := a = b;
         '!=': result := a <> b;
         '>': result := a > b;
         '<': result := a < b;
         '<=': result := a <= b;
         '>=': result := a >= b;
+        'and': result := a and b;
+        'or': result := a or b;
+        'xor': result := a xor b;
         'max': begin
             if a > b then result := a
             else result := b;
@@ -319,7 +335,8 @@ var act : Action;
 begin
     passed := ComputeOperation(a.GetValue(), b.GetValue(), op) = true;
 
-    WriteLn(log_file, 'Condition ', a.GetValue(), ' ', op, ' ', b.GetValue(), ' resulted in ', passed); Flush(log_file);
+    // WriteLn(log_file, 'Condition ', a.GetValue(), ' ', op, ' ', b.GetValue(), ' resulted in ', passed); Flush(log_file);
+    
     // Evaluate condition
     if passed then
         for act in actions do
@@ -427,6 +444,22 @@ begin
     DrawTile(x_val, y_val, str_temp);
 end;
 
+procedure PrintAction.LoadFrom(parts : TStringList; _parent : Action; _indent : integer);
+var i : Integer;
+begin
+    fields := ActionValueList.Create;
+    for i := 1 to parts.Count - 1 do fields.Add(ActionValueFrom(parts[i]));
+end;
+
+procedure PrintAction.Run;
+var val : ActionValue;
+    msg : string;
+begin
+    msg := '';
+    for val in fields do msg := msg + VarToStr(val.GetValue());
+    WriteLn(log_file, msg); Flush(log_file);
+end;
+
 procedure DebugVarMap;
 var i : Integer;
 begin
@@ -472,6 +505,8 @@ begin
     touch_actions := TouchActionList.Create;
     var_map := VarMap.Create;
 
+    WriteLn(log_file, '------------------- [actions processing begin] -------------------'); Flush(log_file);
+
     for i := 0 to actions_text.Count - 1 do
     begin
         action_line := actions_text[i];
@@ -507,6 +542,7 @@ begin
             'touch': line_action := TouchAction.Create;
             'set': line_action := SetAction.Create;
             'call': line_action := CallAction.Create;
+            'print': line_action := PrintAction.Create;
             'set_tile': line_action := SetTileAction.Create;
             'if': line_action := ConditionalAction.Create;
             'elif': begin
@@ -531,6 +567,8 @@ begin
         if line_action is ConditionalAction then cond_action := line_action as ConditionalAction;
         if line_action is ParentAction then parent_action := line_action as ParentAction;
     end;
+
+    WriteLn(log_file, '------------------- [actions processing done] -------------------'); Flush(log_file);
 
     // Return to Root Action
     while parent_action.indent >= 0 do parent_action := parent_action.parent;

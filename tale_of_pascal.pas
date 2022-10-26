@@ -12,6 +12,23 @@ var x : integer = 21;
     dir : Direction = down;
     desc_line_count : integer = 0;
 
+procedure WriteVarMap;
+begin
+    // Interop to Action Lang
+    SetVarMap('player_lx', lx);
+    SetVarMap('player_ly', ly);
+    
+    SetVarMap('player_x', x);
+    SetVarMap('player_y', y);
+end;
+
+procedure ReadVarMap;
+begin
+    // Interop back w/ Action Lang
+    x := GetVarMap('player_x');
+    y := GetVarMap('player_y');
+end;
+
 procedure DrawScr;
 var player_tile : string;
     ch : char;
@@ -61,8 +78,8 @@ begin
     end;
 
     // Redraw tooltip contents
-    TextBackground(tile_db['tooltip'].bg);
-    TextColor(tile_db['tooltip'].fg);
+    TextBackground(FetchTileType('tooltip').bg);
+    TextColor(FetchTileType('tooltip').fg);
     for j := 0 to tooltip_height do
     begin
         CursorAt(map_width + tooltip_gap + 1, j + 1);
@@ -143,18 +160,9 @@ begin
         end;
     end;
     
-    // Interop w/ Action Lang
-    SetVarMap('player_lx', lx);
-    SetVarMap('player_ly', ly);
-    
-    SetVarMap('player_x', x);
-    SetVarMap('player_y', y);
-
+    WriteVarMap;
     TouchAction.DetectTouches(x, y);
-    
-    // Interop back w/ Action Lang
-    x := GetVarMap('player_x');
-    y := GetVarMap('player_y');
+    ReadVarMap;
 
     // Pointer-based Touch action code
     { touch_action := touch_actions[x][y];
@@ -195,8 +203,10 @@ end;
 var input : char;
 
 begin
+    WriteVarMap;
     InitializeConsole;
     DrawMap;
+    ReadVarMap;
 
     repeat
         DrawScr;
