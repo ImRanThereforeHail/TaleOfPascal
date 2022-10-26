@@ -22,7 +22,8 @@ touch 3 3
 // First room plate
 touch 28 6
     set plate_1_count -= 1
-
+    
+    print "Plate pressed count = " $plate_1_count
     if $$plate_1_ptr > 0
         set_tile 28 5 $plate_1_count _
     else
