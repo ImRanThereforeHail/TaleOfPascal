@@ -93,9 +93,6 @@ end;
 
 type GhostAction = interface ['{6a1ffa4f-cb09-4e26-a59a-2b22efc23d90}'] end;
 
-type ElifConditionalAction = class(ConditionalAction, GhostAction) end;
-type ElseConditionalAction = class(ParentAction, GhostAction) end;
-
 type SetAction = class(Action)
 public
     a, b, c, op, op2 : ActionValue;
@@ -526,7 +523,11 @@ begin
         if (Length(action_line) = 0) or (LeftStr(action_line, 2) = '//') then continue;
 
         // Pop parents when the parents are more indented than the current line
-        while parent_action.indent >= indent do parent_action := parent_action.parent;
+        while parent_action.indent >= indent do
+        begin
+            if parent_action is ConditionalAction then cond_action := parent_action as ConditionalAction;
+            parent_action := parent_action.parent;
+        end;
 
         action_parts.DelimitedText := action_line;
 
@@ -546,13 +547,13 @@ begin
             'set_tile': line_action := SetTileAction.Create;
             'if': line_action := ConditionalAction.Create;
             'elif': begin
-                line_action := ElifConditionalAction.Create;
+                line_action := ConditionalAction.Create;
                 cond_action.else_action := line_action;
                 cond_action.has_else_action := true;
                 is_ghost := true;
             end;
             'else': begin
-                line_action := ElseConditionalAction.Create;
+                line_action := ParentAction.Create;
                 cond_action.else_action := line_action;
                 cond_action.has_else_action := true;
                 is_ghost := true;
@@ -563,8 +564,6 @@ begin
         line_action.LoadFrom(action_parts, parent_action, indent);
         
         if not is_ghost then parent_action.actions.Add(line_action);
-
-        if line_action is ConditionalAction then cond_action := line_action as ConditionalAction;
         if line_action is ParentAction then parent_action := line_action as ParentAction;
     end;
 
